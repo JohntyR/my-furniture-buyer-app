@@ -72,9 +72,10 @@ function ShapeTile({ drift = false }) {
 // Fixed to the viewport, sits behind all page content, never intercepts clicks.
 // On the catalogue page it also drifts as you scroll (a subtle parallax
 // effect against the product grid), tiled so it never runs out and scrolls
-// off to empty space - see TILE_HEIGHT above. On the assistant page (no
-// scrolling to hook a parallax off) the shapes get a slow ambient drift
-// instead - see the .bg-shape-drift-* CSS animations in globals.css.
+// off to empty space - see TILE_HEIGHT above. On the assistant, login, and
+// orders pages (mostly static, no scroll to hook a parallax off) the shapes
+// get a slow ambient drift instead - see the .bg-shape-drift-* CSS animations
+// in globals.css.
 //
 // Performance: the scroll handler only ever writes a single `transform` via a
 // ref (no React re-render, no layout/paint - transform is compositor-only)
@@ -87,7 +88,7 @@ export default function BackgroundShapes() {
   const pathname = usePathname();
   const wrapperRef = useRef(null);
   const parallaxEnabled = pathname === "/catalogue";
-  const driftEnabled = pathname === "/";
+  const driftEnabled = pathname === "/" || pathname === "/login" || pathname === "/orders";
 
   useEffect(() => {
     if (!parallaxEnabled) return;
