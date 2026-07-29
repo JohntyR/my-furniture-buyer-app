@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { getRemainingBudget } from "@/lib/budget";
+import { getBalance } from "@/lib/productApi";
 import BudgetBar from "@/components/BudgetBar";
 import ProductCard from "@/components/ProductCard";
 import SearchBar from "@/components/SearchBar";
@@ -26,7 +26,7 @@ export default async function HomePage({ searchParams }) {
       }
     : {};
 
-  const [products, totalCount, remainingBudget] = await Promise.all([
+  const [products, totalCount, balanceResult] = await Promise.all([
     prisma.product.findMany({
       where,
       orderBy: { id: "asc" },
@@ -34,14 +34,14 @@ export default async function HomePage({ searchParams }) {
       take: PAGE_SIZE,
     }),
     prisma.product.count({ where }),
-    getRemainingBudget(user.id),
+    getBalance().catch(() => null),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-6">
-      <BudgetBar budget={user.budget} remaining={remainingBudget} />
+      <BudgetBar balance={balanceResult?.balance} error={!balanceResult} />
 
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

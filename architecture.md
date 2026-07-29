@@ -11,7 +11,9 @@ classDiagram
     }
     class Product {
         int id
+        string itemId
         string name
+        string category
         string description
         float price
         string imageUrl
@@ -34,7 +36,7 @@ classDiagram
 There are three things the app needs to remember:
 
 - **User** — a buyer. Stores their login username, a securely hashed password (never the plain password), and their budget — the total amount of money they're allowed to spend.
-- **Product** — a furniture item in the catalogue. Stores its name, description, price, and a photo.
+- **Product** — a furniture item in the catalogue, sourced from the furniture shop's own catalogue API. Stores its `itemId` (the API's own product ID, used to keep our copy in sync), name, category, description, price, and a photo.
 - **Order** — a record of one buyer ordering one product. Each order stores who placed it, which product, how many, and the price of that product *at the time of ordering* (`priceAtOrder`).
 
 ## How they connect

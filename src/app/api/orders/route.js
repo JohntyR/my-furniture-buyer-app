@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { getRemainingBudget } from "@/lib/budget";
+import { placeRealOrder } from "@/lib/productApi";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -37,28 +37,40 @@ export async function POST(request) {
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
   }
 
-  const cost = product.price * quantity;
-  const remainingBudget = await getRemainingBudget(user.id);
+  const result = await placeRealOrder(product.itemId, quantity);
 
-  if (cost > remainingBudget) {
+  if (!result.ok) {
+    if (result.status === 402) {
+      return NextResponse.json(
+        { error: "Insufficient balance for this purchase." },
+        { status: 402 }
+      );
+    }
+    if (result.status === 404) {
+      return NextResponse.json(
+        { error: "This product is no longer available in the shop's catalogue." },
+        { status: 404 }
+      );
+    }
     return NextResponse.json(
-      { error: "This order would exceed your remaining budget." },
-      { status: 400 }
+      { error: "Could not place the order with the furniture shop right now. Please try again." },
+      { status: 502 }
     );
   }
 
-  const order = await prisma.order.create({
+  const { order_id: orderId, total_price: totalPrice, remaining_balance: remainingBalance } =
+    result.data;
+
+  // Kept locally too, purely as order history for the "My Orders" page -
+  // the furniture shop API is now the source of truth for balance.
+  await prisma.order.create({
     data: {
       userId: user.id,
       productId: product.id,
       quantity,
       priceAtOrder: product.price,
     },
-    include: { product: true },
   });
 
-  return NextResponse.json({
-    order,
-    remainingBudget: remainingBudget - cost,
-  });
+  return NextResponse.json({ orderId, totalPrice, remainingBalance });
 }

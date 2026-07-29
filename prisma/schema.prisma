@@ -21,7 +21,9 @@ model User {
 
 model Product {
   id          Int      @id @default(autoincrement())
+  itemId      String   @unique
   name        String
+  category    String
   description String
   price       Float
   imageUrl    String
