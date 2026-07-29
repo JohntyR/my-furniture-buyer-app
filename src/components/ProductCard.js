@@ -18,7 +18,7 @@ export default function ProductCard({ product }) {
     const response = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: product.id, quantity }),
+      body: JSON.stringify({ itemId: product.itemId, quantity }),
     });
 
     const data = await response.json();
@@ -47,11 +47,11 @@ export default function ProductCard({ product }) {
         <p className="text-lg font-semibold text-gray-900">${product.price.toFixed(2)}</p>
 
         <div className="flex items-center gap-2">
-          <label htmlFor={`qty-${product.id}`} className="text-sm text-gray-600">
+          <label htmlFor={`qty-${product.itemId}`} className="text-sm text-gray-600">
             Qty
           </label>
           <input
-            id={`qty-${product.id}`}
+            id={`qty-${product.itemId}`}
             type="number"
             min="1"
             value={quantity}

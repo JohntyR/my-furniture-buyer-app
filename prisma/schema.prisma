@@ -1,5 +1,9 @@
 // Prisma schema for the Furniture Buyer App.
 // See architecture.md for the plain-English explanation of this data model.
+//
+// The catalogue, balances, and order history all live in the furniture
+// shop's own API now (see src/lib/productApi.js) - the only thing this app
+// still stores itself is login accounts.
 
 generator client {
   provider = "prisma-client-js"
@@ -14,31 +18,5 @@ model User {
   id           Int      @id @default(autoincrement())
   username     String   @unique
   passwordHash String
-  budget       Float
   createdAt    DateTime @default(now())
-  orders       Order[]
-}
-
-model Product {
-  id          Int      @id @default(autoincrement())
-  itemId      String   @unique
-  name        String
-  category    String
-  description String
-  price       Float
-  imageUrl    String
-  createdAt   DateTime @default(now())
-  orders      Order[]
-}
-
-model Order {
-  id           Int      @id @default(autoincrement())
-  quantity     Int
-  priceAtOrder Float
-  createdAt    DateTime @default(now())
-
-  user      User    @relation(fields: [userId], references: [id])
-  userId    Int
-  product   Product @relation(fields: [productId], references: [id])
-  productId Int
 }

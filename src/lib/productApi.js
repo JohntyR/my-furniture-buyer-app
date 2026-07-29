@@ -33,6 +33,65 @@ export async function getBalance() {
   return response.json();
 }
 
+// The catalogue has 762 products; search-index returns all of them in one
+// fast, image-free call (unlike plain /catalogue, which embeds every image
+// as base64 and can take 20+ seconds - the Day 1 guide explicitly warns
+// against using it for browsing). Cached briefly since catalogue data
+// doesn't change during the event and this endpoint has no free-text
+// search of its own - filtering/pagination for the UI happens in-memory
+// over this full list.
+export async function searchCatalogue() {
+  if (!BASE_URL) {
+    throw new Error("PRODUCT_API_BASE_URL is not set. Add it to your .env file.");
+  }
+  const response = await fetch(`${BASE_URL}/catalogue/search-index?limit=1000`, {
+    next: { revalidate: 30 },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch the catalogue (${response.status}).`);
+  }
+
+  return response.json();
+}
+
+// Turns a raw search-index item into what the UI actually renders.
+// Dimensions/colours aren't shown as their own fields anywhere in the UI,
+// so they're folded into a human-readable description here instead.
+export function toDisplayProduct(item) {
+  const dimensions = [item.width, item.depth, item.height].filter(
+    (value) => typeof value === "number"
+  );
+  const dimensionsText = dimensions.length ? `${dimensions.join(" × ")} cm` : null;
+  const colourText = item.colours?.length ? item.colours.join(", ") : null;
+  const description = [item.category, colourText, dimensionsText].filter(Boolean).join(" — ");
+
+  return {
+    itemId: item.item_id,
+    name: item.product_name,
+    category: item.category,
+    description,
+    price: item.price,
+    imageUrl: `${BASE_URL}/catalogue/${item.item_id}/image`,
+  };
+}
+
+// Returns this participant's real past orders:
+// [{ order_id, items: [{ product_id, quantity, unit_price, product_name }], total_amount, timestamp }]
+export async function getOrderHistory() {
+  assertConfigured();
+  const response = await fetch(`${BASE_URL}/orders/${API_USER}`, {
+    headers: { "X-Api-Key": API_KEY },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch order history from the furniture shop API (${response.status}).`);
+  }
+
+  return response.json();
+}
+
 // Places a real order, which really debits the real balance.
 // Returns { ok: true, data: { order_id, status, total_price, remaining_balance } }
 // or { ok: false, status, error } on failure (e.g. 402 insufficient balance, 404 unknown item).

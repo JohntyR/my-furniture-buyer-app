@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getOrderHistory } from "@/lib/productApi";
 
 export default async function OrdersPage() {
   const user = await getCurrentUser();
@@ -8,15 +8,31 @@ export default async function OrdersPage() {
     redirect("/login");
   }
 
-  const orders = await prisma.order.findMany({
-    where: { userId: user.id },
-    include: { product: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const orders = await getOrderHistory().catch(() => null);
 
-  const totalSpent = orders.reduce(
-    (total, order) => total + order.priceAtOrder * order.quantity,
-    0
+  if (orders === null) {
+    return (
+      <div className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-6">
+        <h1 className="text-xl font-semibold text-gray-900">My Orders</h1>
+        <p className="text-sm text-red-600">
+          Couldn&apos;t load your order history from the furniture shop right now. Please try
+          again.
+        </p>
+      </div>
+    );
+  }
+
+  const totalSpent = orders.reduce((total, order) => total + order.total_amount, 0);
+
+  // Each order can contain more than one item; flatten to one row per item.
+  const rows = orders.flatMap((order) =>
+    order.items.map((item) => ({
+      orderId: order.order_id,
+      timestamp: order.timestamp,
+      productName: item.product_name,
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+    }))
   );
 
   return (
@@ -28,7 +44,7 @@ export default async function OrdersPage() {
         <p className="text-2xl font-semibold text-gray-900">${totalSpent.toFixed(2)}</p>
       </div>
 
-      {orders.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="text-sm text-gray-500">You haven&apos;t placed any orders yet.</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-200">
@@ -43,16 +59,16 @@ export default async function OrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td className="px-4 py-2 text-gray-900">{order.product.name}</td>
-                  <td className="px-4 py-2 text-gray-600">{order.quantity}</td>
-                  <td className="px-4 py-2 text-gray-600">${order.priceAtOrder.toFixed(2)}</td>
+              {rows.map((row, index) => (
+                <tr key={`${row.orderId}-${index}`}>
+                  <td className="px-4 py-2 text-gray-900">{row.productName}</td>
+                  <td className="px-4 py-2 text-gray-600">{row.quantity}</td>
+                  <td className="px-4 py-2 text-gray-600">${row.unitPrice.toFixed(2)}</td>
                   <td className="px-4 py-2 font-medium text-gray-900">
-                    ${(order.priceAtOrder * order.quantity).toFixed(2)}
+                    ${(row.unitPrice * row.quantity).toFixed(2)}
                   </td>
                   <td className="px-4 py-2 text-gray-500">
-                    {new Date(order.createdAt).toLocaleDateString()}
+                    {new Date(row.timestamp).toLocaleDateString()}
                   </td>
                 </tr>
               ))}
