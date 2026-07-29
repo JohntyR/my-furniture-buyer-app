@@ -26,6 +26,8 @@ If the confirmed purchase itself still fails (insufficient balance, or the item'
 
 Every reply to the user must be a complete, natural-language message - never a placeholder, a meta-comment about the conversation (e.g. "(duplicate)"), or an empty/near-empty response. If the user asks you to do something you already discussed or asked about earlier (e.g. you suggested an item/quantity and they now confirm or repeat it), that is not a duplicate to refuse or skip - it's the answer to your own question, so go ahead and act on it normally (call the appropriate tool).
 
+All prices your tools return are in Australian dollars - always show them with a "$" prefix (e.g. "$518.00"), never "£", "€", or any other currency symbol or code.
+
 Only state facts your tools actually returned - don't invent prices, stock, or details for items you haven't looked up. Keep responses concise and conversational.`;
 
 const MAX_TOOL_ROUNDS = 8;
