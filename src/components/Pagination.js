@@ -4,7 +4,7 @@ function hrefForPage(page, query) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   params.set("page", String(page));
-  return `/?${params.toString()}`;
+  return `/catalogue?${params.toString()}`;
 }
 
 export default function Pagination({ currentPage, totalPages, query }) {
@@ -15,27 +15,27 @@ export default function Pagination({ currentPage, totalPages, query }) {
       {currentPage > 1 ? (
         <Link
           href={hrefForPage(currentPage - 1, query)}
-          className="rounded-md border border-gray-300 px-3 py-1 hover:bg-gray-50"
+          className="rounded-full border border-oak/60 bg-white px-3 py-1 text-plum transition hover:border-grape hover:text-grape"
         >
           Previous
         </Link>
       ) : (
-        <span className="rounded-md border border-gray-200 px-3 py-1 text-gray-300">Previous</span>
+        <span className="rounded-full border border-oak/30 px-3 py-1 text-plum/30">Previous</span>
       )}
 
-      <span className="text-gray-600">
+      <span className="text-plum/70">
         Page {currentPage} of {totalPages}
       </span>
 
       {currentPage < totalPages ? (
         <Link
           href={hrefForPage(currentPage + 1, query)}
-          className="rounded-md border border-gray-300 px-3 py-1 hover:bg-gray-50"
+          className="rounded-full border border-oak/60 bg-white px-3 py-1 text-plum transition hover:border-grape hover:text-grape"
         >
           Next
         </Link>
       ) : (
-        <span className="rounded-md border border-gray-200 px-3 py-1 text-gray-300">Next</span>
+        <span className="rounded-full border border-oak/30 px-3 py-1 text-plum/30">Next</span>
       )}
     </div>
   );

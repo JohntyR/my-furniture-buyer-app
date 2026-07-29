@@ -1,7 +1,15 @@
 @import "tailwindcss";
 
+@theme {
+  --color-grape: #88498f;
+  --color-pacific: #779fa1;
+  --color-oak: #e0cba8;
+  --color-tomato: #ff6542;
+  --color-plum: #564154;
+}
+
 body {
-  background: #ffffff;
-  color: #171717;
-  font-family: Arial, Helvetica, sans-serif;
+  background: #faf5ee;
+  color: var(--color-plum);
+  font-family: var(--font-roboto), ui-sans-serif, system-ui, Arial, sans-serif;
 }

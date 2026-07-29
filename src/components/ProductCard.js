@@ -39,30 +39,26 @@ export default function ProductCard({ product }) {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-gray-200 shadow-sm">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={product.imageUrl} alt={product.name} className="h-48 w-full object-cover" />
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <span className="w-fit rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+    <div className="group flex flex-col overflow-hidden rounded-2xl border border-oak/50 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+      <div className="relative overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={product.imageUrl}
+          alt={product.name}
+          className="h-52 w-full object-cover transition duration-300 group-hover:scale-105"
+        />
+        <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-plum shadow-sm backdrop-blur">
           {product.category}
         </span>
-        <h2 className="font-semibold text-gray-900">{product.name}</h2>
-        <p className="flex-1 text-sm text-gray-600">{product.description}</p>
-        <p className="text-lg font-semibold text-gray-900">${product.price.toFixed(2)}</p>
+      </div>
 
-        <div className="flex items-center gap-2">
-          <label htmlFor={`qty-${product.itemId}`} className="text-sm text-gray-600">
-            Qty
-          </label>
-          <input
-            id={`qty-${product.itemId}`}
-            type="number"
-            min="1"
-            value={quantity}
-            onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
-            className="w-16 rounded-md border border-gray-300 px-2 py-1 text-sm"
-          />
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <div>
+          <h2 className="font-semibold leading-snug text-plum">{product.name}</h2>
+          <p className="mt-0.5 line-clamp-2 text-sm text-plum/55">{product.description}</p>
         </div>
+
+        <p className="text-xl font-bold text-grape">${product.price.toFixed(2)}</p>
 
         {error && <p className="text-xs text-red-600">{error}</p>}
 
@@ -78,13 +74,35 @@ export default function ProductCard({ product }) {
           </p>
         )}
 
-        <button
-          onClick={handleBuy}
-          disabled={status === "buying"}
-          className="mt-1 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
-        >
-          {status === "buying" ? "Buying..." : "Buy"}
-        </button>
+        <div className="mt-auto flex items-center gap-2 pt-1">
+          <div className="flex items-center overflow-hidden rounded-full border border-oak/60">
+            <button
+              type="button"
+              aria-label="Decrease quantity"
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              className="px-2.5 py-2 text-plum transition hover:bg-oak/25"
+            >
+              −
+            </button>
+            <span className="w-6 text-center text-sm font-medium text-plum">{quantity}</span>
+            <button
+              type="button"
+              aria-label="Increase quantity"
+              onClick={() => setQuantity((q) => q + 1)}
+              className="px-2.5 py-2 text-plum transition hover:bg-oak/25"
+            >
+              +
+            </button>
+          </div>
+
+          <button
+            onClick={handleBuy}
+            disabled={status === "buying"}
+            className="flex-1 rounded-full bg-tomato px-4 py-2 text-sm font-medium text-white transition hover:bg-tomato/90 disabled:opacity-50"
+          >
+            {status === "buying" ? "Buying..." : "Buy"}
+          </button>
+        </div>
       </div>
     </div>
   );

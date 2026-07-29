@@ -13,7 +13,7 @@ export default async function OrdersPage() {
   if (orders === null) {
     return (
       <div className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-6">
-        <h1 className="text-xl font-semibold text-gray-900">My Orders</h1>
+        <h1 className="text-xl font-semibold text-plum">My Orders</h1>
         <p className="text-sm text-red-600">
           Couldn&apos;t load your order history from the furniture shop right now. Please try
           again.
@@ -37,19 +37,19 @@ export default async function OrdersPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-6">
-      <h1 className="text-xl font-semibold text-gray-900">My Orders</h1>
+      <h1 className="text-xl font-semibold text-plum">My Orders</h1>
 
-      <div className="rounded-lg border border-gray-200 p-4">
-        <span className="text-sm font-medium text-gray-700">Total spent</span>
-        <p className="text-2xl font-semibold text-gray-900">${totalSpent.toFixed(2)}</p>
+      <div className="rounded-xl border border-oak/50 bg-gradient-to-r from-grape to-plum p-4 shadow-sm">
+        <span className="text-sm font-medium text-white/80">Total spent</span>
+        <p className="text-2xl font-semibold text-white">${totalSpent.toFixed(2)}</p>
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-sm text-gray-500">You haven&apos;t placed any orders yet.</p>
+        <p className="text-sm text-plum/50">You haven&apos;t placed any orders yet.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <div className="overflow-x-auto rounded-xl border border-oak/60 bg-white shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-gray-600">
+            <thead className="bg-oak/25 text-left text-plum">
               <tr>
                 <th className="px-4 py-2 font-medium">Product</th>
                 <th className="px-4 py-2 font-medium">Qty</th>
@@ -58,16 +58,16 @@ export default async function OrdersPage() {
                 <th className="px-4 py-2 font-medium">Date</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-oak/30">
               {rows.map((row, index) => (
-                <tr key={`${row.orderId}-${index}`}>
-                  <td className="px-4 py-2 text-gray-900">{row.productName}</td>
-                  <td className="px-4 py-2 text-gray-600">{row.quantity}</td>
-                  <td className="px-4 py-2 text-gray-600">${row.unitPrice.toFixed(2)}</td>
-                  <td className="px-4 py-2 font-medium text-gray-900">
+                <tr key={`${row.orderId}-${index}`} className="transition hover:bg-oak/10">
+                  <td className="px-4 py-2 text-plum">{row.productName}</td>
+                  <td className="px-4 py-2 text-plum/70">{row.quantity}</td>
+                  <td className="px-4 py-2 text-plum/70">${row.unitPrice.toFixed(2)}</td>
+                  <td className="px-4 py-2 font-medium text-grape">
                     ${(row.unitPrice * row.quantity).toFixed(2)}
                   </td>
-                  <td className="px-4 py-2 text-gray-500">
+                  <td className="px-4 py-2 text-plum/50">
                     {new Date(row.timestamp).toLocaleDateString()}
                   </td>
                 </tr>

@@ -38,7 +38,7 @@ export default function SearchBar() {
       value={value}
       onChange={(event) => setValue(event.target.value)}
       placeholder="Search products…"
-      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+      className="w-full rounded-full border border-oak/60 bg-white px-4 py-2 text-sm text-plum placeholder:text-plum/40 focus:border-grape focus:outline-none focus:ring-2 focus:ring-grape/20"
     />
   );
 }

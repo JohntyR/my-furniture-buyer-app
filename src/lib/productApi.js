@@ -76,6 +76,31 @@ export function toDisplayProduct(item) {
   };
 }
 
+// Full detail for one already-known item_id (exact dimensions etc.) - NOT for
+// browsing/search. The raw endpoint embeds the product's photo as a base64
+// blob; that's stripped here since images must never enter an LLM's context.
+// Returns null for an unknown item_id instead of throwing, since "item not
+// found" is an expected, recoverable case for a caller (e.g. an agent tool).
+export async function getProductDetail(itemId) {
+  if (!BASE_URL) {
+    throw new Error("PRODUCT_API_BASE_URL is not set. Add it to your .env file.");
+  }
+  const response = await fetch(`${BASE_URL}/catalogue/${encodeURIComponent(itemId)}`, {
+    next: { revalidate: 30 },
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`Failed to fetch product detail (${response.status}).`);
+  }
+
+  const { image_url: _imageUrl, image_mime_type: _imageMimeType, ...detail } =
+    await response.json();
+  return detail;
+}
+
 // Returns this participant's real past orders:
 // [{ order_id, items: [{ product_id, quantity, unit_price, product_name }], total_amount, timestamp }]
 export async function getOrderHistory() {
