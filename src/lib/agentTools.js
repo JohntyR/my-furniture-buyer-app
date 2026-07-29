@@ -12,6 +12,7 @@ import {
   getBalance,
   placeRealOrder,
 } from "@/lib/productApi";
+import { searchCatalogueByDescription } from "@/lib/catalogueRag";
 
 export const AGENT_TOOLS = [
   {
@@ -38,6 +39,30 @@ export const AGENT_TOOLS = [
               "Set true to just list the valid category names instead of products - use this when you don't know the exact category string to filter by.",
           },
         },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_catalogue_by_description",
+      description:
+        "Semantic ('vibe') search over the catalogue for open-ended requests that don't map onto a single exact category - e.g. 'something cosy for a reading nook', " +
+        "'a Scandinavian-style side table but cheaper', 'what's a good option for a kid's room'. Matches by meaning, not exact keywords, and returns the closest few products " +
+        "(name, category, price, dimensions, item_id) ranked by similarity. " +
+        "Important limitations: this is a point-in-time export of the catalogue, not a live lookup - treat price/dimensions here as provisional and confirm with get_product_details " +
+        "before quoting a firm price or placing an order. It also has no colour data at all, so it cannot filter or rank by colour - if the user asks for a colour, say you can't " +
+        "filter by colour and fall back to category/vibe matching plus your own judgement over the results. Prefer search_catalogue when the user names an exact category; use this " +
+        "tool when they describe what they want in vaguer terms instead.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The user's request in their own words, e.g. 'a cosy armchair for reading' or 'cheap storage for a kid's room'.",
+          },
+        },
+        required: ["query"],
       },
     },
   },
@@ -134,6 +159,28 @@ export async function runAgentTool(name, input) {
           // No images here by design - this can match dozens/hundreds of
           // items, and photos are only wanted for a single already-known
           // item (get_product_details), not a multi-item search.
+          images: [],
+        };
+      }
+      case "search_catalogue_by_description": {
+        if (!input?.query) {
+          return { result: { error: "A query is required." }, images: [] };
+        }
+        const matches = await searchCatalogueByDescription(input.query);
+        return {
+          result: {
+            note: "These are semantic matches from a point-in-time catalogue snapshot, ranked by how closely they match the request - not exact keyword or colour matches. Confirm price/availability with get_product_details before quoting a firm price.",
+            products: matches.map((match) => ({
+              item_id: match.itemId,
+              name: match.name,
+              category: match.category,
+              price: match.price,
+              dimensions: match.dimensions,
+            })),
+          },
+          // No images here, same reasoning as search_catalogue - this can
+          // return several candidate items, and photos are only shown for a
+          // single already-known item via get_product_details.
           images: [],
         };
       }

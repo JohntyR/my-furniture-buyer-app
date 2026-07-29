@@ -7,16 +7,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "build-catalogue-index": "node scripts/buildCatalogueIndex.js",
+    "test-retrieval": "node scripts/testRetrieval.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "next": "16.2.12",
     "openai": "^7.1.0",
+    "pdf-parse": "^2.4.5",
     "prisma": "^6.19.3",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -32,6 +36,8 @@
     "unrs-resolver@1.12.2": true,
     "@prisma/client@6.19.3": true,
     "@prisma/engines@6.19.3": true,
-    "prisma@6.19.3": true
+    "prisma@6.19.3": true,
+    "onnxruntime-node@1.24.3": true,
+    "protobufjs@7.6.5": true
   }
 }

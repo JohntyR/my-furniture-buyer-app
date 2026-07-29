@@ -45,3 +45,6 @@ next-env.d.ts
 # sqlite database
 /prisma/dev.db
 /prisma/dev.db-journal
+
+# catalogue RAG index (regenerate with `npm run build-catalogue-index`)
+/data/catalogue-index.json
