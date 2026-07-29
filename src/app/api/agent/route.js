@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { AzureOpenAI } from "openai";
 import { getCurrentUser } from "@/lib/auth";
 import { AGENT_TOOLS, runAgentTool } from "@/lib/agentTools";
 
-const client = new Anthropic();
+const client = new AzureOpenAI({
+  endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+  apiKey: process.env.AZURE_OPENAI_API_KEY,
+  apiVersion: process.env.AZURE_OPENAI_API_VERSION,
+  deployment: process.env.AZURE_OPENAI_DEPLOYMENT,
+});
+
+const MODEL = process.env.AZURE_OPENAI_DEPLOYMENT;
 
 const SYSTEM_PROMPT = `You are a shopping assistant for a furniture shop, helping the logged-in user browse the real catalogue, check their real balance, and place real orders through your tools.
 
@@ -12,7 +19,11 @@ Be honest about what your tools can and can't do:
 - get_product_details only works for one item you already know the item_id of (e.g. from a search_catalogue result) - it's not a way to search.
 - check_balance and place_order always act on the one real identity this app is authorized as - there's no other user to check or act as.
 
-Money is real: place_order genuinely and irreversibly debits the user's real balance. Always confirm the item, quantity, and total cost with the user before calling place_order - never place an order the user hasn't clearly asked for. Before confirming, compute the expected total yourself (price x quantity) and check it against the user's balance so you can flag it upfront if it won't fit, but still handle a 402 (insufficient balance) or 404 (item unavailable) result gracefully if it happens anyway - just explain plainly what went wrong.
+Money is real: place_order genuinely and irreversibly debits the user's real balance, and it is a two-step tool by design. The first call (confirmed omitted/false) is always just a priced preview - no money moves. Present that preview's item name, quantity, unit price, total price, and balance to the user in plain text and stop there - wait for the user's own next message to explicitly confirm before ever calling place_order again with confirmed: true. Never call place_order with confirmed: true in the same reply where you first proposed the purchase, and never assume or fabricate the user's confirmation. If they say no, or ask for something different, don't place the order.
+
+If the confirmed purchase itself still fails (insufficient balance, or the item's gone from the catalogue), never surface the raw error, error code, or JSON - explain in one or two plain sentences what happened using the actual numbers/details the tool gave you, and always follow up with a concrete next step: for insufficient balance, state their current balance and suggest a lower quantity or a cheaper item (offer to search_catalogue the same category for one); for an item that's no longer available, say so and offer to re-run search_catalogue for a current alternative in that category. For any other order failure, say the shop couldn't be reached and suggest trying again shortly.
+
+Every reply to the user must be a complete, natural-language message - never a placeholder, a meta-comment about the conversation (e.g. "(duplicate)"), or an empty/near-empty response. If the user asks you to do something you already discussed or asked about earlier (e.g. you suggested an item/quantity and they now confirm or repeat it), that is not a duplicate to refuse or skip - it's the answer to your own question, so go ahead and act on it normally (call the appropriate tool).
 
 Only state facts your tools actually returned - don't invent prices, stock, or details for items you haven't looked up. Keep responses concise and conversational.`;
 
@@ -36,46 +47,130 @@ export async function POST(request) {
     return NextResponse.json({ error: "A message is required." }, { status: 400 });
   }
 
-  const messages = [...(Array.isArray(history) ? history : []), { role: "user", content: message }];
+  // The system prompt is re-added fresh on every request rather than stored
+  // in the round-tripped history, so client-side state never carries it.
+  const messages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...(Array.isArray(history) ? history : []),
+    { role: "user", content: message },
+  ];
 
   let reply = "";
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const response = await client.messages.create({
-        model: "claude-opus-5",
-        max_tokens: 4096,
-        output_config: { effort: "medium" },
-        system: SYSTEM_PROMPT,
-        tools: AGENT_TOOLS,
+      const response = await client.chat.completions.create({
+        model: MODEL,
         messages,
+        tools: AGENT_TOOLS,
       });
 
-      messages.push({ role: "assistant", content: response.content });
+      const choice = response.choices[0];
+      const assistantMessage = choice.message;
+      const toolCalls = assistantMessage.tool_calls ?? [];
 
-      if (response.stop_reason === "refusal") {
+      if (choice.finish_reason === "content_filter") {
+        messages.push({ role: "assistant", content: assistantMessage.content ?? null });
         reply = "I can't help with that request.";
         break;
       }
 
-      const toolUses = response.content.filter((block) => block.type === "tool_use");
-
-      if (toolUses.length === 0) {
-        reply = response.content
-          .filter((block) => block.type === "text")
-          .map((block) => block.text)
-          .join("\n");
+      if (toolCalls.length === 0) {
+        // The model occasionally ends a turn with no tool call and a
+        // suspiciously short/placeholder-like reply (e.g. a bare "(duplicate)")
+        // instead of actually answering. Give it one chance to try again with
+        // a nudge before showing that to the user - the nudge itself isn't
+        // saved to history, only whatever reply comes out of it.
+        const text = (assistantMessage.content ?? "").trim();
+        if (text.length < 8) {
+          const retryResponse = await client.chat.completions.create({
+            model: MODEL,
+            messages: [
+              ...messages,
+              { role: "assistant", content: text || null },
+              {
+                role: "user",
+                content:
+                  "That reply didn't actually answer my message - please respond properly, in full natural language.",
+              },
+            ],
+            tools: AGENT_TOOLS,
+          });
+          const retryText = (retryResponse.choices[0].message.content ?? "").trim();
+          reply = retryText || "Sorry, could you rephrase that?";
+        } else {
+          reply = text;
+        }
+        messages.push({ role: "assistant", content: reply });
         break;
       }
 
-      const toolResults = await Promise.all(
-        toolUses.map(async (toolUse) => ({
-          type: "tool_result",
-          tool_use_id: toolUse.id,
-          content: JSON.stringify(await runAgentTool(toolUse.name, toolUse.input)),
-        }))
+      messages.push({
+        role: "assistant",
+        content: assistantMessage.content ?? null,
+        tool_calls: toolCalls,
+      });
+
+      const rawResults = await Promise.all(
+        toolCalls.map(async (toolCall) => {
+          let input = {};
+          try {
+            input = JSON.parse(toolCall.function.arguments || "{}");
+          } catch {
+            input = {};
+          }
+          return { toolCall, result: await runAgentTool(toolCall.function.name, input) };
+        })
       );
 
-      messages.push({ role: "user", content: toolResults });
+      for (const { toolCall, result } of rawResults) {
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(result),
+        });
+      }
+
+      // A place_order preview just came back (no purchase happened). This is
+      // enforced here, not just in the prompt: let the model phrase the
+      // confirmation ask in one more turn, then hard-stop for real - any
+      // tool call it attempts in that same response (e.g. trying to confirm
+      // the purchase itself) is discarded, so a real order can never be
+      // placed in the same turn it was first proposed.
+      const awaitingConfirmation = rawResults.some(({ result }) => result?.requires_confirmation);
+
+      if (awaitingConfirmation) {
+        const confirmResponse = await client.chat.completions.create({
+          model: MODEL,
+          messages,
+          tools: AGENT_TOOLS,
+        });
+
+        let confirmText = (confirmResponse.choices[0].message.content ?? "").trim();
+
+        // Same defensive retry as below - this extra call, where the model
+        // comments on a tool call/result it just produced itself, is the
+        // likeliest place for a short placeholder-style reply to slip out.
+        if (confirmText.length < 8) {
+          const retryResponse = await client.chat.completions.create({
+            model: MODEL,
+            messages: [
+              ...messages,
+              { role: "assistant", content: confirmText || null },
+              {
+                role: "user",
+                content:
+                  "That reply didn't actually present the order preview - please describe it properly, in full natural language.",
+              },
+            ],
+            tools: AGENT_TOOLS,
+          });
+          confirmText = (retryResponse.choices[0].message.content ?? "").trim();
+        }
+
+        reply = confirmText || "Just to confirm - would you like me to go ahead with that purchase?";
+        messages.push({ role: "assistant", content: reply });
+        break;
+      }
 
       if (round === MAX_TOOL_ROUNDS - 1) {
         reply = "That's taking more steps than expected - could you try rephrasing or simplifying your request?";
@@ -84,10 +179,14 @@ export async function POST(request) {
   } catch (error) {
     console.error("Agent request failed:", error);
     return NextResponse.json(
-      { error: "The assistant hit an error talking to Claude. Please try again." },
+      { error: "The assistant hit an error talking to the model. Please try again." },
       { status: 502 }
     );
   }
 
-  return NextResponse.json({ reply, messages });
+  // Never send the system prompt back to the client (or it'll get round-tripped
+  // into the next request's history alongside the fresh one added above).
+  const historyToReturn = messages.filter((entry) => entry.role !== "system");
+
+  return NextResponse.json({ reply, messages: historyToReturn });
 }

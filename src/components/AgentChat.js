@@ -14,7 +14,7 @@ export default function AgentChat() {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState("idle"); // idle | sending
   const [error, setError] = useState("");
-  const [history, setHistory] = useState([]); // raw Anthropic messages (for the API)
+  const [history, setHistory] = useState([]); // raw chat messages (for the API)
   const [displayMessages, setDisplayMessages] = useState([]); // [{role, text}] for rendering
 
   async function handleSubmit(event) {
