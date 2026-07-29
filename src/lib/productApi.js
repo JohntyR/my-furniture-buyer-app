@@ -94,20 +94,29 @@ export async function getOrderHistory() {
 
 // Places a real order, which really debits the real balance.
 // Returns { ok: true, data: { order_id, status, total_price, remaining_balance } }
-// or { ok: false, status, error } on failure (e.g. 402 insufficient balance, 404 unknown item).
+// or { ok: false, status, error } on failure - status 0 means the request
+// never got a response at all (network error), so callers can treat it like
+// any other failure without needing a special case.
 export async function placeRealOrder(itemId, quantity) {
   assertConfigured();
-  const response = await fetch(`${BASE_URL}/orders`, {
-    method: "POST",
-    headers: {
-      "X-Api-Key": API_KEY,
-      "Content-Type": "application/json",
-    },
-    // The live API expects an `items` array (undocumented in the Day 1
-    // guide, which showed a flat item_id/quantity body - confirmed against
-    // the real endpoint before wiring this up).
-    body: JSON.stringify({ user_id: API_USER, items: [{ item_id: itemId, quantity }] }),
-  });
+
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}/orders`, {
+      method: "POST",
+      headers: {
+        "X-Api-Key": API_KEY,
+        "Content-Type": "application/json",
+      },
+      // The live API expects an `items` array (undocumented in the Day 1
+      // guide, which showed a flat item_id/quantity body - confirmed against
+      // the real endpoint before wiring this up).
+      body: JSON.stringify({ user_id: API_USER, items: [{ item_id: itemId, quantity }] }),
+    });
+  } catch (error) {
+    console.error("Could not reach the furniture shop API to place an order:", error);
+    return { ok: false, status: 0, error: { detail: error.message } };
+  }
 
   const data = await response.json().catch(() => ({}));
 

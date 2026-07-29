@@ -15,23 +15,27 @@ export default function ProductCard({ product }) {
     setError("");
     setConfirmation(null);
 
-    const response = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId: product.itemId, quantity }),
-    });
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: product.itemId, quantity }),
+      });
 
-    const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      setError(data.error || "Something went wrong.");
+      if (!response.ok) {
+        setError(data.error || "Something went wrong. Please try again.");
+        return;
+      }
+
+      setConfirmation(data);
+      router.refresh();
+    } catch {
+      setError("Couldn't reach the shop right now. Please try again.");
+    } finally {
       setStatus("idle");
-      return;
     }
-
-    setStatus("idle");
-    setConfirmation(data);
-    router.refresh();
   }
 
   return (
@@ -55,7 +59,7 @@ export default function ProductCard({ product }) {
             type="number"
             min="1"
             value={quantity}
-            onChange={(event) => setQuantity(Math.max(1, Number(event.target.value)))}
+            onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
             className="w-16 rounded-md border border-gray-300 px-2 py-1 text-sm"
           />
         </div>
@@ -64,8 +68,13 @@ export default function ProductCard({ product }) {
 
         {confirmation && (
           <p className="text-xs text-green-700">
-            Order placed (#{confirmation.orderId}) for ${confirmation.totalPrice.toFixed(2)}.
-            Remaining balance: ${confirmation.remainingBalance.toFixed(2)}.
+            Order placed{confirmation.orderId ? ` (#${confirmation.orderId})` : ""}
+            {typeof confirmation.totalPrice === "number"
+              ? ` for $${confirmation.totalPrice.toFixed(2)}.`
+              : "."}
+            {typeof confirmation.remainingBalance === "number"
+              ? ` Remaining balance: $${confirmation.remainingBalance.toFixed(2)}.`
+              : ""}
           </p>
         )}
 
