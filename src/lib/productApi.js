@@ -55,6 +55,13 @@ export async function searchCatalogue() {
   return response.json();
 }
 
+// The image endpoint is public (no API key) and safe to hit straight from
+// the browser, unlike the base64-embedded images on the plain /catalogue
+// and /catalogue/{id} endpoints.
+export function getProductImageUrl(itemId) {
+  return `${BASE_URL}/catalogue/${itemId}/image`;
+}
+
 // Turns a raw search-index item into what the UI actually renders.
 // Dimensions/colours aren't shown as their own fields anywhere in the UI,
 // so they're folded into a human-readable description here instead.
@@ -72,7 +79,7 @@ export function toDisplayProduct(item) {
     category: item.category,
     description,
     price: item.price,
-    imageUrl: `${BASE_URL}/catalogue/${item.item_id}/image`,
+    imageUrl: getProductImageUrl(item.item_id),
   };
 }
 

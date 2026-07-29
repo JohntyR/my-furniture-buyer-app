@@ -44,7 +44,7 @@ export default function AgentChat() {
       setHistory(data.messages ?? []);
       setDisplayMessages((prev) => [
         ...prev,
-        { role: "assistant", text: data.reply || "(no response)" },
+        { role: "assistant", text: data.reply || "(no response)", products: data.products ?? [] },
       ]);
     } catch {
       setError("Couldn't reach the assistant. Please try again.");
@@ -82,6 +82,30 @@ export default function AgentChat() {
               >
                 {message.text}
               </span>
+              {message.products?.length > 0 && (
+                <div className="mt-2 flex max-w-[85%] gap-3 overflow-x-auto pb-1">
+                  {message.products.map((product) => (
+                    <div
+                      key={product.itemId}
+                      className="flex w-28 flex-shrink-0 flex-col items-center gap-1 rounded-xl border border-oak/60 bg-white p-2 text-center"
+                    >
+                      <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded-lg bg-oak/25">
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <p className="w-full truncate text-xs text-plum" title={product.name}>
+                        {product.name}
+                      </p>
+                      <p className="text-xs font-medium text-plum/70">
+                        ${product.price.toFixed(2)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))
         )}

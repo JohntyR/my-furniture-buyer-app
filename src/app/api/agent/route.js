@@ -16,8 +16,9 @@ const SYSTEM_PROMPT = `You are a shopping assistant for a furniture shop, helpin
 
 Be honest about what your tools can and can't do:
 - search_catalogue only matches an exact category name - it has no keyword, price, or colour filter. If the user wants something "cheap", a specific colour, or a vague vibe, fetch the relevant category and apply that judgement yourself over the results - never claim the tool itself understood that request.
-- get_product_details only works for one item you already know the item_id of (e.g. from a search_catalogue result) - it's not a way to search.
+- get_product_details only works for one item you already know the item_id of (e.g. from a search_catalogue result) - it's not a way to search. When the user asks to see an item's details, your reply must state the actual facts the tool returned - name, item_id, price, category, colour(s), and dimensions - before asking anything else. Don't skip straight to a purchase question.
 - check_balance and place_order always act on the one real identity this app is authorized as - there's no other user to check or act as.
+- Your only capabilities are these four tools: searching/browsing the catalogue, looking up one item's details, checking balance, and placing orders. There is no delivery scheduling, assembly service, shipping, returns, or any other capability - never offer or mention them, even as a follow-up suggestion. After a completed purchase or any other reply, only offer next steps you can actually do with these tools (e.g. browse more items, check balance, look up another item).
 
 Money is real: place_order genuinely and irreversibly debits the user's real balance, and it is a two-step tool by design. The first call (confirmed omitted/false) is always just a priced preview - no money moves. Present that preview's item name, quantity, unit price, total price, and balance to the user in plain text and stop there - wait for the user's own next message to explicitly confirm before ever calling place_order again with confirmed: true. Never call place_order with confirmed: true in the same reply where you first proposed the purchase, and never assume or fabricate the user's confirmation. If they say no, or ask for something different, don't place the order.
 
@@ -28,6 +29,13 @@ Every reply to the user must be a complete, natural-language message - never a p
 Only state facts your tools actually returned - don't invent prices, stock, or details for items you haven't looked up. Keep responses concise and conversational.`;
 
 const MAX_TOOL_ROUNDS = 8;
+
+// Catches not just too-short replies but meta-comments like "(duplicate)" -
+// a bare parenthesized/bracketed remark is never a real answer, no matter
+// its length.
+function isPlaceholderReply(text) {
+  return text.length < 8 || /^[([].*[)\]]$/.test(text);
+}
 
 export async function POST(request) {
   const user = await getCurrentUser();
@@ -56,6 +64,12 @@ export async function POST(request) {
   ];
 
   let reply = "";
+  // Product images the tools turned up along the way, keyed by itemId so the
+  // same product surfaced twice (e.g. search then get_product_details)
+  // only shows up once. This never goes into `messages` - it's a UI-only
+  // side channel, returned alongside `reply` but never round-tripped back
+  // into the model's context.
+  const productImages = new Map();
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const response = await client.chat.completions.create({
@@ -81,7 +95,7 @@ export async function POST(request) {
         // a nudge before showing that to the user - the nudge itself isn't
         // saved to history, only whatever reply comes out of it.
         const text = (assistantMessage.content ?? "").trim();
-        if (text.length < 8) {
+        if (isPlaceholderReply(text)) {
           const retryResponse = await client.chat.completions.create({
             model: MODEL,
             messages: [
@@ -118,16 +132,20 @@ export async function POST(request) {
           } catch {
             input = {};
           }
-          return { toolCall, result: await runAgentTool(toolCall.function.name, input) };
+          const { result, images } = await runAgentTool(toolCall.function.name, input);
+          return { toolCall, result, images };
         })
       );
 
-      for (const { toolCall, result } of rawResults) {
+      for (const { toolCall, result, images } of rawResults) {
         messages.push({
           role: "tool",
           tool_call_id: toolCall.id,
           content: JSON.stringify(result),
         });
+        for (const image of images) {
+          productImages.set(image.itemId, image);
+        }
       }
 
       // A place_order preview just came back (no purchase happened). This is
@@ -150,7 +168,7 @@ export async function POST(request) {
         // Same defensive retry as below - this extra call, where the model
         // comments on a tool call/result it just produced itself, is the
         // likeliest place for a short placeholder-style reply to slip out.
-        if (confirmText.length < 8) {
+        if (isPlaceholderReply(confirmText)) {
           const retryResponse = await client.chat.completions.create({
             model: MODEL,
             messages: [
@@ -188,5 +206,9 @@ export async function POST(request) {
   // into the next request's history alongside the fresh one added above).
   const historyToReturn = messages.filter((entry) => entry.role !== "system");
 
-  return NextResponse.json({ reply, messages: historyToReturn });
+  return NextResponse.json({
+    reply,
+    messages: historyToReturn,
+    products: Array.from(productImages.values()),
+  });
 }
