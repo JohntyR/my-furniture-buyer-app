@@ -1,6 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+// Tailwind styling for markdown elements the assistant might use - mainly
+// tables (multi-item results) and lists/paragraphs, kept visually close to
+// the existing plain-text bubble.
+const MARKDOWN_COMPONENTS = {
+  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+  ul: ({ children }) => <ul className="mb-2 list-disc space-y-0.5 pl-4 last:mb-0">{children}</ul>,
+  ol: ({ children }) => <ol className="mb-2 list-decimal space-y-0.5 pl-4 last:mb-0">{children}</ol>,
+  li: ({ children }) => <li className="leading-snug">{children}</li>,
+  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  table: ({ children }) => (
+    <div className="mb-2 overflow-x-auto rounded-lg border border-oak/60 last:mb-0">
+      <table className="w-full border-collapse text-xs">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-oak/40">{children}</thead>,
+  th: ({ children }) => (
+    <th className="border-b border-oak/60 px-2 py-1 text-left font-medium whitespace-nowrap">{children}</th>
+  ),
+  td: ({ children }) => <td className="border-b border-oak/30 px-2 py-1 align-top">{children}</td>,
+};
 
 function textFromMessage(message) {
   if (typeof message.content === "string") return message.content;
@@ -72,16 +95,17 @@ export default function AgentChat() {
               key={index}
               className={message.role === "user" ? "text-right" : "text-left"}
             >
-              <span
-                className={
-                  "inline-block max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm " +
-                  (message.role === "user"
-                    ? "bg-grape text-white"
-                    : "bg-oak/25 text-plum")
-                }
-              >
-                {message.text}
-              </span>
+              {message.role === "user" ? (
+                <span className="inline-block max-w-[85%] whitespace-pre-wrap rounded-2xl bg-grape px-4 py-2 text-sm text-white">
+                  {message.text}
+                </span>
+              ) : (
+                <div className="inline-block max-w-[85%] rounded-2xl bg-oak/25 px-4 py-2 text-left text-sm text-plum">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+                    {message.text}
+                  </ReactMarkdown>
+                </div>
+              )}
               {message.products?.length > 0 && (
                 <div className="mt-2 flex max-w-[85%] gap-3 overflow-x-auto pb-1">
                   {message.products.map((product) => (

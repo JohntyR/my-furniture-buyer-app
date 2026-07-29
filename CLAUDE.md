@@ -46,6 +46,7 @@ furniture-buyer-app/
 
 ## Conventions
 
+- Keep responses short and concise — skip lengthy explanations/summaries unless asked.
 - Plain JavaScript, not TypeScript — keep things easy to read even though the user won't be editing code directly.
 - The furniture shop API is a real, live external service tied to one shared event balance — test purchases cost real (event) money. Always use the cheapest item when testing the buy flow.
 - The API is scoped to a single participant identity (`PRODUCT_API_USER`/`PRODUCT_API_KEY`), so every local login account that buys something spends against the same shared real balance — there's no per-account balance separation.
