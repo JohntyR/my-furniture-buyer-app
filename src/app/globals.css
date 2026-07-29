@@ -13,3 +13,129 @@ body {
   color: var(--color-plum);
   font-family: var(--font-roboto), ui-sans-serif, system-ui, Arial, sans-serif;
 }
+
+/* Slow ambient drift for the background shapes (assistant page only).
+   Animates the standalone `translate` property so it composes cleanly with
+   Tailwind's separate `rotate-*` utilities on the same element - no shared
+   `transform` property to fight over. Runs on the compositor only. */
+@keyframes drift-a {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 22px -26px;
+  }
+}
+@keyframes drift-b {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: -24px 18px;
+  }
+}
+@keyframes drift-c {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 18px 24px;
+  }
+}
+@keyframes drift-d {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: -20px -22px;
+  }
+}
+/* Same as drift-a but keeps the -50% centering translate this one shape needs. */
+@keyframes drift-center {
+  0%,
+  100% {
+    translate: -50% 0;
+  }
+  50% {
+    translate: calc(-50% + 16px) -20px;
+  }
+}
+
+.bg-shape-drift-1 {
+  animation: drift-a 14s ease-in-out infinite;
+  animation-delay: -1s;
+}
+.bg-shape-drift-2 {
+  animation: drift-b 17s ease-in-out infinite;
+  animation-delay: -6s;
+}
+.bg-shape-drift-3 {
+  animation: drift-c 12s ease-in-out infinite;
+  animation-delay: -3s;
+}
+.bg-shape-drift-4 {
+  animation: drift-d 16s ease-in-out infinite;
+  animation-delay: -8s;
+}
+.bg-shape-drift-5 {
+  animation: drift-a 18s ease-in-out infinite;
+  animation-delay: -11s;
+}
+.bg-shape-drift-6 {
+  animation: drift-b 14s ease-in-out infinite;
+  animation-delay: -4s;
+}
+.bg-shape-drift-7 {
+  animation: drift-c 16s ease-in-out infinite;
+  animation-delay: -9s;
+}
+.bg-shape-drift-8 {
+  animation: drift-center 19s ease-in-out infinite;
+  animation-delay: -7s;
+}
+.bg-shape-drift-9 {
+  animation: drift-b 15s ease-in-out infinite;
+  animation-delay: -5s;
+}
+.bg-shape-drift-10 {
+  animation: drift-d 13s ease-in-out infinite;
+  animation-delay: -2s;
+}
+.bg-shape-drift-11 {
+  animation: drift-a 17s ease-in-out infinite;
+  animation-delay: -10s;
+}
+.bg-shape-drift-12 {
+  animation: drift-c 14s ease-in-out infinite;
+  animation-delay: -6s;
+}
+.bg-shape-drift-13 {
+  animation: drift-a 15s ease-in-out infinite;
+  animation-delay: -3s;
+}
+.bg-shape-drift-14 {
+  animation: drift-c 13s ease-in-out infinite;
+  animation-delay: -7s;
+}
+.bg-shape-drift-15 {
+  animation: drift-b 16s ease-in-out infinite;
+  animation-delay: -1s;
+}
+.bg-shape-drift-16 {
+  animation: drift-d 12s ease-in-out infinite;
+  animation-delay: -5s;
+}
+.bg-shape-drift-17 {
+  animation: drift-a 18s ease-in-out infinite;
+  animation-delay: -9s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="bg-shape-drift-"] {
+    animation: none;
+  }
+}

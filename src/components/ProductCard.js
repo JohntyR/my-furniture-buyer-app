@@ -40,14 +40,16 @@ export default function ProductCard({ product }) {
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-oak/50 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-      <div className="relative overflow-hidden">
+      {/* Photo sits on its own tinted "mat" so a white product photo never
+          blends into the card - only this small area is oak, not the card. */}
+      <div className="relative m-3 mb-0 aspect-square overflow-hidden rounded-xl bg-oak/50">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={product.imageUrl}
           alt={product.name}
-          className="h-52 w-full object-cover transition duration-300 group-hover:scale-105"
+          className="h-full w-full object-contain p-4 transition duration-300 group-hover:scale-105"
         />
-        <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-plum shadow-sm backdrop-blur">
+        <span className="absolute top-2 left-2 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-plum shadow-sm backdrop-blur">
           {product.category}
         </span>
       </div>
